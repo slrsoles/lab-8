@@ -1,15 +1,19 @@
 ---
 title: "Lab 8: Searching for Efficiency"
-author: "Your name here!"
+author: "Skylar Richards"
 format: html
 editor: source
 embed-resources: true
+code-tools: true
+code-fold: true
 ---
 
 ```{r}
 #| label: pacakges
-
+#| message: false
 library(tidyverse)
+library(here)
+library(kableExtra)
 ```
 
 For this week's lab, we will be revisiting questions from previous lab
@@ -20,7 +24,7 @@ folder, so all you need to do is read them in. 🙃
 
 ```{r}
 #| label: read-in-old-data
-
+#| message: false
 # Data from Lab 2
 surveys <- read_csv(here::here("data", "surveys.csv"))
 
@@ -43,7 +47,18 @@ each variable, with the datatype of that variable immediately below it's name.
 
 ```{r}
 #| label: map-data-types-of-surveys
+survey_data_type <- surveys|>
+  map_chr(class)|>
+  enframe(name = "Variable", value = "DataType")|>
+  pivot_wider(names_from = Variable, values_from = DataType)
 
+data_types_pretty <- survey_data_type|>
+  kable(caption = "Data Types of Surveys Dataset, by Variable Name") |>
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"), 
+                 full_width = TRUE, 
+                 font_size = 14)
+  
+data_types_pretty
 
 ```
 
@@ -61,8 +76,10 @@ list output back into a data frame.
 
 ```{r}
 #| label: map-to-mutate-columns
-
-
+evals_revamps <- evals|>
+  map_at(c("teacher_id","weekday","academic_degree","seniority","gender"),as.factor)|>
+  bind_cols()
+  
 ```
 
 Next up, we're going revisit Question 7 which asked:
@@ -87,8 +104,67 @@ I'm using the `sen_level` classification from Challenge 3
 
 ```{r}
 #| label: double-pivot-for-summary-table
-
-
+summary_table <- evals|>
+  group_by(teacher_id)|>
+  summarize(
+    sex = first(sex),
+    seniority = mean(seniority, na.rm = TRUE),
+    academic_degree = first(academic_degree),
+    .groups = "drop"
+  )|>
+  mutate(seniority_level = if_else(seniority <= 4, "Junior", "Senior"))|>
+  count(sex,seniority_level, academic_degree)|>
+  pivot_wider(names_from = c(sex, seniority_level, academic_degree), values_from = n)|>
+  summarize(
+    Male = sum(c(male_Junior_dr,
+                 male_Junior_ma,
+                 male_Junior_no_dgr,
+                 male_Junior_prof,
+                 male_Senior_dr,
+                 male_Senior_ma,
+                 male_Senior_no_dgr,
+                 male_Senior_prof), na.rm = TRUE),
+  Female = sum(c(female_Junior_dr,
+                 female_Junior_ma,
+                 female_Junior_no_dgr,
+                 female_Junior_prof,
+                 female_Senior_dr,
+                 female_Senior_ma), na.rm = TRUE),
+  "Junior (Less than 4 years)"  = sum(c(male_Junior_dr,
+                 male_Junior_ma,
+                 male_Junior_no_dgr,
+                 male_Junior_prof,
+                 female_Junior_dr,
+                 female_Junior_ma,
+                 female_Junior_no_dgr,
+                 female_Junior_prof), na.rm = TRUE),
+   "Senior (More than 4 years)" = sum(c(male_Senior_dr,
+                 male_Senior_ma,
+                 male_Senior_no_dgr,
+                 male_Senior_prof,
+                 female_Senior_dr,
+                 female_Senior_ma), na.rm = TRUE),
+  "No Degree" = sum(c(male_Senior_no_dgr,
+                    male_Junior_no_dgr,
+                    female_Junior_no_dgr), na.rm = TRUE),
+  Masters = sum(c(male_Senior_ma,
+                    male_Junior_ma,
+                    female_Junior_ma,
+                    female_Senior_ma), na.rm = TRUE),
+  Doctorate = sum(c(male_Senior_dr,
+                    male_Junior_dr,
+                    female_Junior_dr,
+                    female_Senior_dr), na.rm = TRUE),
+  Professor = sum(c(male_Senior_prof,
+                    male_Junior_prof,
+                    female_Junior_prof), na.rm = TRUE)
+  )
+pretty_summary_table <- summary_table|>
+   kable(caption = "Instructor Evaluations Demographics") |>
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"), 
+                 full_width = TRUE, 
+                 font_size = 14)
+pretty_summary_table
 ```
 
 ::: {.callout-tip}
@@ -111,5 +187,13 @@ Question 1 asked you to use `across()` to make a table which summarized:
 ```{r}
 #| label: map-missing-values-of-fish
 
+missing_values_fish <- fish|>
+  map_int(~sum(is.na(.)))|>
+  enframe(name = "Variable Name", value = "Number of Missing Values")
 
+missing_values_fish|>
+  kable(caption = "Missing Values from Each Variable") |>
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "bordered"), 
+                 full_width = TRUE, 
+                 font_size = 14)
 ```
